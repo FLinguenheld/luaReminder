@@ -4,7 +4,9 @@
 #include "../lib/lua/src/lualib.h"
 #include "../lib/lua/src/lauxlib.h"
 
-
+// --------------------------------------------------
+// -- Just open a file with a print inside
+// --------------------------------------------------
 void lua_example_dofile(void)
 {
     lua_State* L = luaL_newstate();
@@ -13,6 +15,9 @@ void lua_example_dofile(void)
     lua_close(L);
 }
 
+// --------------------------------------------------
+// -- Put a var in the stack and get it
+// --------------------------------------------------
 void lua_example_getvar(void)
 {
     lua_State* L = luaL_newstate();
@@ -23,8 +28,11 @@ void lua_example_getvar(void)
     printf("(in C) The value of some_var is: %d\n ", (int)some_var_in_c);
 
     lua_close(L);
-}
 
+
+// --------------------------------------------------
+// -- Fill the stack and read
+// --------------------------------------------------
 void lua_example_stack(void){
     lua_State* L = luaL_newstate();
     lua_pushnumber(L, 286); //stack[1] or stack[-3]
@@ -38,31 +46,45 @@ void lua_example_stack(void){
     lua_close(L);
 }
 
-void lua_example_call_lua_function(void){
+// --------------------------------------------------
+// -- Call a function inside a lua file
+// --------------------------------------------------
+void addition_in_lua(int a, int b){
 
     lua_State* L = luaL_newstate();
-    if (luaL_dofile(L, "./scripts/pythagoras.lua") != LUA_OK){
+    if (luaL_dofile(L, "./scripts/addition.lua") != LUA_OK){
         luaL_error(L, "Error : %s\n", lua_tostring(L, -1));
     }
 
-    lua_getglobal(L, "pythagoras");
+    lua_getglobal(L, "addition");
 
-    if (lua_isfunction(L, -1)){
-        lua_pushnumber(L, 3); // 1st argument
-        lua_pushnumber(L, 4); // 2nd argument
+    if (lua_isfunction(L, -1))  // last stack position
+    {
+        lua_pushnumber(L, a);   // 1st argument : a
+        lua_pushnumber(L, b);   // 2nd argument : b
 
         const int NUM_ARGS = 2;
         const int NUM_RETURNS = 1;
 
-        lua_pcall(L, NUM_ARGS, NUM_RETURNS, 0);
+        if (lua_pcall(L, NUM_ARGS, NUM_RETURNS, 0) != LUA_OK){
+            luaL_error(L, "Error: %s\n", lua_tostring(L, -1));
+        } else {
+        lua_Number random_return = lua_tonumber(L, -1);
 
-        lua_Number pythagoras_result = lua_tonumber(L, -1);
+        printf("%d + %d = %d\n", a, b, (int)random_return);
+        }
 
-        printf("The pythagoras(3, 4) result is %f\n", (float)pythagoras_result);
     }
     lua_close(L);
 }
 
+
+void lua_example_call_c_function(void){
+    lua_State* L = luaL_newstate();
+
+
+    lua_close(L);
+}
 
 int main(int argc, char *argv[])
 {
@@ -70,7 +92,7 @@ int main(int argc, char *argv[])
     lua_example_dofile();
     lua_example_getvar();
     lua_example_stack();
-    lua_example_call_lua_function();
+    addition_in_lua(4, 6);
 
     return 0;
 }
