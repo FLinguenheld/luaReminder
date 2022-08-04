@@ -174,6 +174,30 @@ void lua_example_userdata(void) {
     lua_close(L);
 }
 
+// --------------------------------------------------
+// -- Table in lua
+// --------------------------------------------------
+void lua_table(void)
+{
+    lua_State* L = luaL_newstate();
+    if (luaL_dofile(L, "./scripts/table.lua") == LUA_OK){
+        lua_getglobal(L, "chicken");
+        if (lua_istable(L, -1)){
+
+            // Be carreful, stack's positions could make you crazy
+            lua_getfield(L, -1, "eggs");
+            lua_getfield(L, -2, "color");
+            lua_getfield(L, -3, "name");
+            printf("The chicken's name is %s\n", lua_tostring(L, -1));
+            printf("With the color : %s\n", lua_tostring(L, -2));
+            printf("And he has %d eggs\n", (int)lua_tonumber(L, -3));
+        }
+    } else{
+        luaL_error(L, "Error: %s\n", lua_tostring(L, -1));
+    }
+
+    lua_close(L);
+}
 
 // --------------------------------------------------
 // --------------------------------------------------
@@ -188,6 +212,8 @@ int main(int argc, char *argv[])
     send_subtraction_to_lua(100, 84);
 
     lua_example_userdata();
+    lua_table();
+
 
     return 0;
 }
