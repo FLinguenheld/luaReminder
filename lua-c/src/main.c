@@ -79,7 +79,7 @@ void addition_in_lua(int a, int b)
 // --------------------------------------------------
 // -- Send a function to lua
 // --------------------------------------------------
-int soustraction_in_c(lua_State* L)
+int subtraction_in_c(lua_State* L)
 {
     // Be carreful with the stack order !
     lua_Number b = lua_tonumber(L, -1);
@@ -88,15 +88,15 @@ int soustraction_in_c(lua_State* L)
     lua_pushnumber(L, a - b);
     return 1;   // The number of returned values
 }
-void send_soustraction_to_lua(int a, int b)
+void send_subtraction_to_lua(int a, int b)
 {
     lua_State* L = luaL_newstate();
 
-    lua_pushcfunction(L, soustraction_in_c);
-    lua_setglobal(L, "soustraction_in_c");
+    lua_pushcfunction(L, subtraction_in_c);
+    lua_setglobal(L, "subtraction_in_c");
 
-    luaL_dofile(L, "./scripts/read_c_function.lua");
-    lua_getglobal(L, "soustraction");
+    luaL_dofile(L, "./scripts/subtraction.lua");
+    lua_getglobal(L, "subtraction");
 
     if (lua_isfunction(L, -1)){
         lua_pushnumber(L, a);  // 1st argument : a
@@ -114,6 +114,68 @@ void send_soustraction_to_lua(int a, int b)
 
 
 // --------------------------------------------------
+// -- Userdata
+// --------------------------------------------------
+typedef struct rectangle2d {
+    int x;
+    int y;
+    int width;
+    int height;
+} rectangle;
+
+// Create a rectangle in lua
+int create_rectangle(lua_State* L) {
+    rectangle* rect = (rectangle*)lua_newuserdata(L, sizeof(rectangle));
+    rect->x = 0;
+    rect->y = 0;
+    rect->width = 0;
+    rect->height = 0;
+
+    return 1;   // Return one element : the rect
+}
+
+// Update a rectangle in lua
+int change_rectangle_size(lua_State* L){
+
+    rectangle* rect = lua_touserdata(L, -3);
+    lua_Number width = lua_tonumber(L, -2);
+    lua_Number height = lua_tonumber(L, -1);
+
+    rect->height = (int)height;
+    rect->width = (int)width;
+
+    return 0; // Return nothing to the stack
+}
+
+// Push two functions
+// Wait a var "square" in -1
+// Display dimensions
+void lua_example_userdata(void) {
+    lua_State* L = luaL_newstate();
+
+    // Exposing create_rectangle() to lua
+    lua_pushcfunction(L, create_rectangle);
+    lua_setglobal(L, "create_rectangle");
+
+    // Exposing change_rectangle_size() to lua
+    lua_pushcfunction(L, change_rectangle_size);
+    lua_setglobal(L, "change_rectangle_size");
+
+    luaL_dofile(L, "./scripts/rectangle.lua");
+    lua_getglobal(L, "square");
+
+    if (lua_isuserdata(L, -1)){
+        rectangle* r = (rectangle*)lua_touserdata(L, -1);
+        printf("Rectangle reçu depuis lua\nwidth : %d\nheight : %d\n", r->width, r->height);
+    } else {
+        printf("Pas de rectangle reçu !\n");
+    }
+
+    lua_close(L);
+}
+
+
+// --------------------------------------------------
 // --------------------------------------------------
 int main(int argc, char *argv[])
 {
@@ -123,7 +185,9 @@ int main(int argc, char *argv[])
     lua_example_stack();
     addition_in_lua(4, 6);
 
-    send_soustraction_to_lua(100, 84);
+    send_subtraction_to_lua(100, 84);
+
+    lua_example_userdata();
 
     return 0;
 }
