@@ -19,6 +19,8 @@ SDL_Renderer* renderer = NULL;
 int is_runing = FALSE;
 int last_frame_time;
 
+lua_State* L;
+
 struct player {
     float x;
     float y;
@@ -26,6 +28,10 @@ struct player {
     float height;
 } player;
 
+
+// --------------------------------------------------
+// -- Init
+// --------------------------------------------------
 int initialize_window(void)
 {
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
@@ -75,16 +81,6 @@ void setup(void){
     player.height = 10;
 }
 
-void update(void){
-
-    while (!SDL_TICKS_PASSED(SDL_GetTicks(), last_frame_time + FRAME_TIME_LENGTH));
-    float delta_time = (SDL_GetTicks() - last_frame_time) / 1000.0f;
-    last_frame_time = SDL_GetTicks();
-
-    player.x += 100 * delta_time;
-    player.y += 50 * delta_time;
-
-}
 void render(void){
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
@@ -106,9 +102,60 @@ void destroy_window(void){
     SDL_Quit();
 }
 
+// --------------------------------------------------
+// -- Lauch update from lua
+// --------------------------------------------------
+void update(void){
 
+    while (!SDL_TICKS_PASSED(SDL_GetTicks(), last_frame_time + FRAME_TIME_LENGTH));
+    float delta_time = (SDL_GetTicks() - last_frame_time) / 1000.0f;
+    last_frame_time = SDL_GetTicks();
+
+    lua_getglobal(L, "update");
+    if (lua_isfunction(L, -1)){
+
+        lua_pushnumber(L, delta_time);
+
+        const int NUM_ARGS = 1;
+        const int NUM_RETURNS = 0;
+
+        lua_pcall(L, NUM_ARGS, NUM_RETURNS, 0);
+    }
+
+    // Part sent to lua !
+    //player.x += 100 * delta_time;
+    //player.y += 50 * delta_time;
+}
+
+int set_player_pos(lua_State* L) {
+
+    lua_Number x = lua_tonumber(L, -2);
+    lua_Number y = lua_tonumber(L, -1);
+
+    player.x = (int)x;
+    player.y = (int)y;
+
+    return 0;
+}
+
+
+// --------------------------------------------------
+// -- Main
+// --------------------------------------------------
 int main (int argc, char *argv[])
 {
+    L = luaL_newstate();
+    luaL_openlibs(L);
+    if (luaL_dofile(L, "./scripts/playermovement.lua") != LUA_OK) {
+        luaL_error(L,
+                   "Error reading playermovement.lua : %s\n",
+                   lua_tostring(L, -1));
+        return EXIT_FAILURE;
+    }
+
+    lua_pushcfunction(L, set_player_pos);
+    lua_setglobal(L, "set_player_pos");
+
     is_runing = initialize_window();
 
     setup();
